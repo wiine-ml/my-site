@@ -1,0 +1,87 @@
+import{_ as e}from"./plugin-vue_export-helper-DlAUqK2U.js";import{c as a,a as n,b as i,d as l,o as p}from"./app-CGH85rGz.js";const r={};function t(d,s){return p(),a("div",null,[s[0]||(s[0]=n("h1",{id:"",tabindex:"-1"},[n("a",{class:"header-anchor",href:"#"},[n("span")])],-1)),i(" more "),s[1]||(s[1]=l(`<h2 id="前言" tabindex="-1"><a class="header-anchor" href="#前言"><span>前言</span></a></h2><p>本文将带你实现一个简单的 Steam 游戏信息爬虫，通过 Python 及其相关库，模拟浏览器操作，从 Steam 商店获取并解析游戏信息，最终以清晰的格式展示出来。</p><h2 id="_1-程序概览" tabindex="-1"><a class="header-anchor" href="#_1-程序概览"><span>1. 程序概览</span></a></h2><p>该爬虫程序主要分为以下几个部分：</p><blockquote><ul><li>URL 构造：根据用户指定的查询条件动态生成目标 Steam 搜索表页的 URL。</li><li>数据抓取：利用 Selenium 模拟浏览器打开生成的 URL，获取页面的 HTML 内容。</li><li>数据解析：使用 BeautifulSoup 解析 HTML，提取游戏名称、游戏 ID、游戏平台、发行日期、评价、价格等关键信息。</li><li>结果展示：将解析得到的游戏信息以特定格式打印输出。</li></ul></blockquote><h2 id="_2-详细拆解" tabindex="-1"><a class="header-anchor" href="#_2-详细拆解"><span>2. 详细拆解</span></a></h2><h3 id="_2-1-环境准备" tabindex="-1"><a class="header-anchor" href="#_2-1-环境准备"><span>2.1. 环境准备</span></a></h3><p>确保安装了以下工具和库：</p><ul><li>Python</li><li>Selenium 库（通过 pip install selenium 安装）</li><li>Webdriver_manager 库（通过 pip install webdriver-manager 安装）</li><li>BeautifulSoup 库（通过 pip install beautifulsoup4 安装）</li></ul><h3 id="_2-2-代码实现" tabindex="-1"><a class="header-anchor" href="#_2-2-代码实现"><span>2.2. 代码实现</span></a></h3><h4 id="_2-2-1-导入必要的模块" tabindex="-1"><a class="header-anchor" href="#_2-2-1-导入必要的模块"><span>2.2.1 导入必要的模块</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>from selenium import webdriver</span></span>
+<span class="line"><span>from selenium.webdriver.common.by import By</span></span>
+<span class="line"><span>from selenium.webdriver.common.keys import Keys</span></span>
+<span class="line"><span>from selenium.webdriver.edge.service import Service</span></span>
+<span class="line"><span>from webdriver_manager.microsoft import EdgeChromiumDriverManager</span></span>
+<span class="line"><span>import time</span></span>
+<span class="line"><span>from bs4 import BeautifulSoup</span></span>
+<span class="line"><span>import sys</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>导入用于模拟浏览器操作的 Selenium 相关模块、用于设置等待时间的 time 模块、用于解析 HTML 内容的 BeautifulSoup 模块以及用于处理命令行参数的 sys 模块。</p><h4 id="_2-2-2-定义目标页面基础-url-和游戏信息存储列表" tabindex="-1"><a class="header-anchor" href="#_2-2-2-定义目标页面基础-url-和游戏信息存储列表"><span>2.2.2 定义目标页面基础 URL 和游戏信息存储列表</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>base_url = &quot;https://store.steampowered.com/&quot;</span></span>
+<span class="line"><span>result_games = []</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div></div></div><p>指定要爬取的 Steam 商店页面的基础 URL，并创建一个空列表 result_games，用于存储后续提取的游戏信息。</p><h4 id="_2-2-3-定义游戏信息类" tabindex="-1"><a class="header-anchor" href="#_2-2-3-定义游戏信息类"><span>2.2.3 定义游戏信息类</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>class SteamGameInfo:</span></span>
+<span class="line"><span>    def __init__(self):</span></span>
+<span class="line"><span>        self.game_id = None</span></span>
+<span class="line"><span>        self.game_link = None</span></span>
+<span class="line"><span>        self.game_title = None</span></span>
+<span class="line"><span>        self.game_platform = None</span></span>
+<span class="line"><span>        self.game_released = None</span></span>
+<span class="line"><span>        self.game_reviewscore = None</span></span>
+<span class="line"><span>        self.game_price_final = None</span></span>
+<span class="line"><span>        self.game_price_discount = None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    def __repr__(self):</span></span>
+<span class="line"><span>        return (</span></span>
+<span class="line"><span>            f&quot;SteamGameInfo(\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    id: {self.game_id},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    游戏链接: {self.game_link}\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    游戏名称: {self.game_title if self.game_title is not None else &#39;空&#39;},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    平台: {self.game_platform if self.game_platform is not None else &#39;空&#39;},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    发行日期: {self.game_released if self.game_released is not None else &#39;空&#39;},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    评价: {self.game_reviewscore if self.game_reviewscore is not None else &#39;空&#39;},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    价格: {self.game_price_final if self.game_price_final is not None else &#39;空&#39;},\\n&quot;</span></span>
+<span class="line"><span>            f&quot;    折扣: {self.game_price_discount if self.game_price_discount is not None else &#39;空&#39;}\\n&quot;</span></span>
+<span class="line"><span>            &quot;)&quot;</span></span>
+<span class="line"><span>        )</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>定义一个 SteamGameInfo 类，用于封装游戏的各项信息，包括游戏 ID、链接、名称、平台、发行日期、评价、价格和折扣。重定义 __repr__ 方法以便于打印输出游戏信息。</p><h4 id="_2-2-4-定义-url-构造函数" tabindex="-1"><a class="header-anchor" href="#_2-2-4-定义-url-构造函数"><span>2.2.4 定义 URL 构造函数</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>def steam_search_url_construct(search_term) -&gt; str:</span></span>
+<span class="line"><span>    return f&quot;{base_url}search/?term={search_term}&amp;ignore_preferences=1&quot;</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div></div></div><p>定义 steam_search_url_construct 函数，根据用户输入的搜索词动态生成 Steam 搜索<br> 的搜索页面 URL。</p><h4 id="_2-2-5-定义游戏信息获取函数" tabindex="-1"><a class="header-anchor" href="#_2-2-5-定义游戏信息获取函数"><span>2.2.5 定义游戏信息获取函数</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>def search_steam_game(target_url: str, search_len: int = 10) -&gt; list:</span></span>
+<span class="line"><span>    search_results = []</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    driver = webdriver.Edge(service=Service(EdgeChromiumDriverManager().install()))</span></span>
+<span class="line"><span>    driver.get(target_url)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    time.sleep(5)</span></span>
+<span class="line"><span>    print(&#39;start get page source&#39;)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    html_content = driver.page_source</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    soup = BeautifulSoup(html_content, &#39;lxml&#39;)</span></span>
+<span class="line"><span>    print(&#39;get soup success&#39;)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    game_items = soup.select(&#39;a.search_result_row&#39;)</span></span>
+<span class="line"><span>    for item in game_items[:search_len]:</span></span>
+<span class="line"><span>        game = SteamGameInfo()</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        game.game_link = item.get(&#39;href&#39;)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        game.game_id = item.get(&#39;data-ds-appid&#39;) or item.get(&#39;data-ds-bundleid&#39;)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        title_span = item.select_one(&#39;span.title&#39;)</span></span>
+<span class="line"><span>        game.game_title = title_span.get_text(strip=True) if title_span else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        platform_imgs = item.select(&#39;span.platform_img&#39;)</span></span>
+<span class="line"><span>        game.game_platform = &#39; &#39;.join([img.get(&#39;class&#39;, [&#39;&#39;])[0] for img in platform_imgs]) if platform_imgs else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        released_div = item.select_one(&#39;div.search_released.responsive_secondrow&#39;)</span></span>
+<span class="line"><span>        game.game_released = released_div.get_text(strip=True) if released_div else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        review_span = item.select_one(&#39;span.search_review_summary&#39;)</span></span>
+<span class="line"><span>        game.game_reviewscore = review_span.get(&#39;data-tooltip-html&#39;) if review_span else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        price_div = item.select_one(&#39;div.discount_final_price&#39;)</span></span>
+<span class="line"><span>        game.game_price_final = price_div.get_text(strip=True) if price_div else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        discount_pct = item.select_one(&#39;div.discount_pct&#39;)</span></span>
+<span class="line"><span>        game.game_price_discount = discount_pct.get_text(strip=True) if discount_pct else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        search_results.append(game)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    driver.quit()</span></span>
+<span class="line"><span>    return search_results</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>定义 search_steam_game 函数，用于获取并解析目标 URL 页面中的游戏信息。初始化 Edge 浏览器的 WebDriver，打开目标 URL，等待页面加载，获取页面的 HTML 内容并解析，提取游戏链接、ID、名称、平台、发行日期、评价、价格和折扣等信息，封装成 SteamGameInfo 对象并添加到结果列表中。最后关闭浏览器并返回结果列表。</p><h4 id="_2-2-6-主函数入口" tabindex="-1"><a class="header-anchor" href="#_2-2-6-主函数入口"><span>2.2.6 主函数入口</span></a></h4><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>if __name__ == &quot;__main__&quot;:</span></span>
+<span class="line"><span>    if len(sys.argv) &lt; 2:</span></span>
+<span class="line"><span>        exit(0)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    search_name = sys.argv[1]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    target_url = steam_search_url_construct(search_term=search_name)</span></span>
+<span class="line"><span>    print(f&quot;Target URL: {target_url}&quot;)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    results = search_steam_game(target_url)</span></span>
+<span class="line"><span>    for result in results:</span></span>
+<span class="line"><span>        print(result)</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>判断当前脚本是否作为主程序运行。从命令行参数获取用户输入的搜索词，构造目标 URL，调用 search_steam_game 函数获取游戏信息列表，并遍历打印每个游戏的信息。<br> 在调用该程序时只需打开命令行界面输入</p><div class="language- line-numbers-mode" data-highlighter="shiki" data-ext="" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code><span class="line"><span>Python 爬虫文件名.py 搜索关键字</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div></div></div><p>即可调用程序得到搜索结果了</p><h2 id="_3-总结" tabindex="-1"><a class="header-anchor" href="#_3-总结"><span>3.总结</span></a></h2><p>  通过以上步骤，我们实现了一个简单的 Steam 游戏信息爬虫。该爬虫能够根据用户指定的查询条件，构造相应的 Steam 商店页面 URL，模拟浏览器打开页面并提取游戏信息，最终以清晰的格式展示出来。你可以根据实际需求对爬虫进行进一步的优化和扩展，例如增加异常处理、支持更多查询条件、将结果保存到文件或数据库等。</p>`,32))])}const o=e(r,[["render",t]]),v=JSON.parse('{"path":"/program-design/%E7%AE%80%E5%8D%95Steam%E6%B8%B8%E6%88%8F%E4%BF%A1%E6%81%AF%E7%88%AC%E8%99%AB.html","title":"简单Steam游戏信息爬虫","lang":"zh-CN","frontmatter":{"title":"简单Steam游戏信息爬虫","icon":"code","date":"2025-05-01T00:00:00.000Z","category":["教程"],"tag":["Python","爬虫","教程"],"head":[["script",{"type":"application/ld+json"},"{\\"@context\\":\\"https://schema.org\\",\\"@type\\":\\"Article\\",\\"headline\\":\\"简单Steam游戏信息爬虫\\",\\"image\\":[\\"\\"],\\"datePublished\\":\\"2025-05-01T00:00:00.000Z\\",\\"dateModified\\":null,\\"author\\":[{\\"@type\\":\\"Person\\",\\"name\\":\\"wiine-ml\\",\\"url\\":\\"https://mister-hope.com\\"}]}"],["meta",{"property":"og:url","content":"https://mister-hope.github.io/my-site/program-design/%E7%AE%80%E5%8D%95Steam%E6%B8%B8%E6%88%8F%E4%BF%A1%E6%81%AF%E7%88%AC%E8%99%AB.html"}],["meta",{"property":"og:site_name","content":"wiine-site"}],["meta",{"property":"og:title","content":"简单Steam游戏信息爬虫"}],["meta",{"property":"og:type","content":"article"}],["meta",{"property":"og:locale","content":"zh-CN"}],["meta",{"property":"article:tag","content":"教程"}],["meta",{"property":"article:tag","content":"爬虫"}],["meta",{"property":"article:tag","content":"Python"}],["meta",{"property":"article:published_time","content":"2025-05-01T00:00:00.000Z"}]]},"git":{},"readingTime":{"minutes":3.94,"words":1183},"filePathRelative":"program-design/简单Steam游戏信息爬虫.md","excerpt":"\\n"}');export{o as comp,v as data};
